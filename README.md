@@ -4,12 +4,41 @@
 开始记录我在使用/学习Linux（Ubuntu/Debian）过程中的心得体会以及遇到的一些问题。
 在我再回过头看时，也许会感到收获很多吧！
 
-## 01  [Ambian优化](https://github.com/Portuguass/Linux_learning/blob/main/Ambian优化.md)
+## 00  [Ambian优化](https://github.com/Portuguass/Linux_learning/blob/main/Ambian优化.md)
 
 我初次接触，又或者说正式接触使用Linux是源于斐讯N1盒子这么个东西。
 在使用过程中，我常常会遇到一些莫名其妙的问题搞崩系统，因此我做了这么一份总结文件，方便自己再重新配置环境时不至于摸不着头脑，同时也减少到处百度/谷歌的时间。
 
 由于Armbian版本的迭代更新，我本身就是一名追新党，文中的一些修改方式/处理方法可能不再适用于最新的系统，需要读者根据自身的实际情况进行更改~
+
+
+
+
+
+## 01  换源  
+
+由于国内的网络原因，官方源用起来会非常慢。但是在安装的时候他会检测自动帮你换一个比较快的源。其实也没差，但是不排除你有强迫症，就是想用国内源。
+```bash
+1.备份原有源（万一有啥毛病也能替换回去）
+sudo cp -v /etc/apt/sources.list /etc/apt/sources.list.backup
+2.清除缓存文件
+sudo apt clean
+3.删除原有源
+sudo rm -rf /etc/apt/sources.list
+4.更换源
+sudo nano /etc/apt/sources.list
+以下为修改内容，因地制宜，自行替换。
+deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal main restricted universe multiverse
+# deb-src https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal main restricted universe multiverse
+deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal-updates main restricted universe multiverse
+# deb-src https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal-updates main restricted universe multiverse
+deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal-backports main restricted universe multiverse
+# deb-src https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal-backports main restricted universe multiverse
+deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal-security main restricted universe multiverse
+# deb-src https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal-security main restricted universe multiverse
+5.更新、升级
+sudo apt update && sudo apt upgrade -y
+```
 
 
 
@@ -25,7 +54,7 @@
 
 （apt的使用）
 
-```
+```bash
 sudo apt install Samba Samba-common 
 ```
 
@@ -37,7 +66,7 @@ sudo apt install Samba Samba-common
 
 （文本编辑器nano/vim）
 
-```
+```bash
 nano /etc/Samba/smb.conf
 ```
 
@@ -45,7 +74,7 @@ nano /etc/Samba/smb.conf
 
 参考模板：
 
-```
+```bash
 [global]
    security = user
    map to guest = bad user
@@ -64,7 +93,7 @@ nano /etc/Samba/smb.conf
 
 （Linux进程管理）
 
-```
+```bash
 sudo service smbd restart
 抑或是
 sudo /etc/init.d/smbd restart
@@ -92,7 +121,7 @@ sudo /etc/init.d/smbd restart
 
 (wget的使用方法)
 
-```
+```bash
 wget http://soft.vpser.net/lnmp/lnmp1.8.tar.gz -cO lnmp1.8.tar.gz && tar zxf lnmp1.8.tar.gz && cd lnmp1.8 && LNMP_Auto="y" DBSelect="2" DB_Root_Password="alt***ea" InstallInnodb="y" PHPSelect="8" SelectMalloc="2" CheckMirror="n" ./install.sh lnmp
 
 
@@ -107,7 +136,7 @@ wget http://soft.vpser.net/lnmp/lnmp1.8.tar.gz -cO lnmp1.8.tar.gz && tar zxf lnm
 
 修改/usr/local/nginx/conf/enable-php.conf 文件，添加pathinfo2.conf
 
-```
+```bash
 location ~ [^/]\.php(/|$)
      {
             try_files $uri =404;
@@ -120,7 +149,7 @@ location ~ [^/]\.php(/|$)
 
 pathinfo2.conf
 
-```
+```bash
 set $real_script_name $fastcgi_script_name;
 if ($fastcgi_script_name ~ "(.+?\.php)(/.*)") {
 set $real_script_name $1;
@@ -133,7 +162,7 @@ fastcgi_param PATH_INFO $path_info;
 
 如果除首页外全部404，则为伪静态规则问题，请使用以下伪静态规则：
 
-```
+```bash
 location /
 {
 index index.html index.php;
@@ -161,7 +190,7 @@ ubuntu安装docker流程参考[官方文档](https://docs.docker.com/engine/inst
 
 #### 04.1.1  更新软件包索引并使apt支持https
 
-```
+```bash
  sudo apt update
  sudo apt install \
     ca-certificates \
@@ -172,13 +201,13 @@ ubuntu安装docker流程参考[官方文档](https://docs.docker.com/engine/inst
 
 #### 04.1.2  添加Docker官方的GPG密钥
 
-```
+```bash
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 ```
 
 #### 04.1.3  配置源文件
 
-```
+```bash
 echo \
   "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
   $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
@@ -186,7 +215,7 @@ echo \
 
 #### 04.1.4  安装
 
-```
+```bash
 sudo apt-get update
 sudo apt-get install docker-ce docker-ce-cli containerd.io
 ```
@@ -197,22 +226,315 @@ sudo apt-get install docker-ce docker-ce-cli containerd.io
 
 安装命令如下：
 
-```
+```bash
 curl -fsSL https://get.docker.com | sudo bash -s docker --mirror Aliyun
 ```
 
 也可以使用国内 daocloud 一键安装命令：
 
-```
+```bash
 curl -sSL https://get.daocloud.io/docker | sudo sh
 ```
 
 
 
-### 04.3  Docker 卸载
+### 04.3  常用容器
+
+#### 04.3.1  图形化管理工具 Portainer 
+
+```bash
+docker run -d -p 9000:9000 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock portainer/portainer-ce
+```
+
+#### 04.3.2  个人博客 Typecho
+
+```bash
+docker run -d -p 8000:80 --name typecho --restart=always -v /media/typecho:/data 80x86/typecho:latest
+```
+
+#### 04.3.3  私人网盘 Filebrowser
+
+```bash
+docker pull 80x86/filebrowser:latest
+```
+
+#### 04.3.4 下载工具 qbittorrent
+
+```bash
+docker run -d  --name="qbittorrent" --restart=always -v /downloads:/downloads /media/qbittorrent/data:/data /media/qbittorrent/config:/config 80x86/qbittorrent
+```
+
+
+
+### 04.4  卸载
+
+```bash
+或许补充，记得之前看见一篇很不错的教程。是csdn上面的。
+```
+
+
+
+
+
+## 05  Java
+
+### 05.1  安装
+
+#### 0.5.1.1  包管理器安装
+
+```bash
+a.
+安装OpenJDK 11:
+sudo apt update && sudo apt install default-jdk -y
+安装完成后，通过检查Java版本进行验证:
+java -version
+
+openjdk version "11.0.13" 2021-10-19
+OpenJDK Runtime Environment (build 11.0.13+8-Ubuntu-0ubuntu1.20.04)
+OpenJDK 64-Bit Server VM (build 11.0.13+8-Ubuntu-0ubuntu1.20.04, mixed mode, sharing)
+
+b.
+安装OpenJDK指定版本，如：Java 8
+sudo apt update && sudo apt install openjdk-8-jdk -y
+安装完成后，通过检查Java版本进行验证:
+java -version
 
 ```
-后续补充，记得之前看见一篇很不错的教程。是csdn上面的。
+
+#### 05.1.2  编译安装
+
+```bash
+1.下载jdk-8u151-linux-x64.tar.gz到download目录
+http://www.oracle.com/technetwork/cn/java/javase/downloads/jdk8-downloads-2133151-zhs.html
+
+2.安装jdk
+cd download/
+mkdir /usr/local/java
+tar zxvf jdk-8u151-linux-x64.tar.gz -C /usr/local/java
+ln -s /usr/local/java/jdk1.8.0_151/ /usr/local/java/latest
+
+3. 添加环境变量：
+vim /etc/profile
+加入如下内容：
+export JAVA_HOME=/usr/local/java/latest
+export CLASSPATH=.:$JAVA_HOME/jre/lib/rt.jar:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar
+export PATH=$PATH:$JAVA_HOME/bin
+
+4.执行并检验
+source /etc/profile
+java -version #检验
+```
+
+
+
+### 0.5.2  卸载
+
+```bash
+暂时没遇上要卸载，有需要再写
+```
+
+
+
+
+
+## 06  Python
+
+一般而言，系统就自带了python3/2，重要自己补全开发环境（附加包）就行。
+
+### 06.1  安装
+
+#### 06.1.1  包管理器安装
+
+```bash
+1.安装依赖
+sudo apt install build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev wget libbz2-dev
+2.安装开发环境
+sudo apt update
+sudo apt install python3-dev python3-pip
+3.升级
+pip3 install --upgrade pip setuptools wheel
+4.ipython3
+ipython3是Python 交互工具，比Python自带环境更智能：
+sudo apt install ipython3
+
+```
+
+#### 06.1.2  编译安装
+
+
+
+
+
+
+
+
+
+
+
+## 09  杂七杂八
+
+### 09.1 .user.ini 
+
+```bash
+chattr命令用于改变文件属性。
+这项指令可改变存放在ext2文件系统上的文件或目录属性，这些属性共有以下8种模式：
+a：让文件或目录仅供附加用途。
+b：不更新文件或目录的最后存取时间。
+c：将文件或目录压缩后存放。
+d：将文件或目录排除在倾倒操作之外。
+i：不得任意更动文件或目录。
+s：保密性删除文件或目录。
+S：即时更新文件或目录i。
+u：预防意外删除。
+我们主要用的是 i 的模式
+第一：切换到 .user.ini 目录
+第二：使用命令 chattr -i .user.ini  解除文件不可更动属性，之后就可以修改/删除.user.ini这个文件了
+第三：chattr +i .user.ini   重新恢复文件不可更动属性
+```
+
+
+
+### 09.2  crontab
+
+#### 09.2.1  安装
+
+如果没有安装crontab，请先安装。
+
+```
+apt install crontab
+```
+
+#### 09.2.2  设置
+
+接着可以使用下面命令开关crontab
+
+```bash
+service crond start/stop/restart/reload    #启动/关闭/重启/重载
+```
+
+查看crontab服务状态：
+
+```bash
+service crond status
+```
+
+手动启动crontab服务：
+
+```bash
+service crond start
+```
+
+查看crontab服务是否已设置为开机启动，执行命令：ntsysv
+
+如果列表中有crond，而且前面有[*]就说明已经添加了开机启动。如果没有可以按照下面的步骤执行。
+
+使用tab键可以切换到确认取消栏。
+
+加入开机自动启动:
+
+```bash
+chkconfig crond on
+```
+
+**用法**
+
+**功能说明**：设置计时器。
+
+**语　　法**：crontab [-u <用户名称>][配置文件] 或 crontab [-u <用户名称>][-elr]
+
+**补充说明**：cron是一个常驻服务，它提供计时器的功能，让用户在特定的时间得以执行预设的指令或程序。只要用户会编辑计时器的配置文件，就可以使 用计时器的功能。其配置文件格式如下：
+Minute Hour Day Month DayOFWeek Command
+**参　　数**：
+*-e* 编辑该用户的计时器设置。
+*-l* 列出该用户的计时器设置。
+*-r* 删除该用户的计时器设置。
+*-u<用户名称>* 指定要设定计时器的用户名称。
+
+**基本格式** :
+
+```bash
+*　 *　 *　*　 *   command
+分　时　日　月　周　 命令
+第1列表示分钟1～59 每分钟用*或者 */1表示
+第2列表示小时1～23（0表示0点）
+第3列表示日期1～31
+第4列 表示月份1～12
+第5列标识号星期0～6（0表示星期天）
+第6列要运行的命令
+# Use the hash sign to prefix a comment
+# +—————- minute (0 – 59)
+# | +————- hour (0 – 23)
+# | | +———- day of month (1 – 31)
+# | | | +——- month (1 – 12)
+# | | | | +—- day of week (0 – 7) (Sunday=0 or 7)
+# | | | | |
+# * * * * * command to be executed
+```
+
+**举例**
+
+```bash
+30 21 * * * /etc/init.d/nginx restart
+每晚的21:30重启 nginx。
+
+45 4 1,10,22 * * /etc/init.d/nginx restart
+每月1、 10、22日的4 : 45重启nginx。
+
+10 1 * * 6,0 /etc/init.d/nginx restart
+每周六、周日的1 : 10重启nginx。
+
+0,30 18-23 * * * /etc/init.d/nginx restart
+每天18 : 00至23 : 00之间每隔30分钟重启nginx。
+
+0 23 * * 6 /etc/init.d/nginx restart
+每星期六的11 : 00 pm重启nginx。
+
+\* */1 * * * /etc/init.d/nginx restart
+每一小时重启nginx
+
+\* 23-7/1 * * * /etc/init.d/nginx restart
+晚上11点到早上7点之间，每 隔一小时重启nginx
+
+0 11 4 * mon-wed /etc/init.d/nginx restart
+每月的4号与每周一到周三 的11点重启nginx
+
+0 4 1 jan * /etc/init.d/nginx restart
+一月一号的4点重启nginx
+
+*/30 * * * * /usr/sbin/ntpdate 210.72.145.20
+每半小时同步一下时间n
+```
+
+
+
+#### 09.2.3  统计文件和目录
+
+Linux统计当前目录下有多少文件和目录
+
+仅仅做个笔记：
+
+统计当前目录下文件的个数，不包括子目录：
+
+```bash
+ls -l |grep "^-"|wc -l
+```
+
+统计当前目录下目录的个数，不包括子目录：
+
+```bash
+ls -l |grep "^d"|wc -l
+```
+
+统计当前目录下文件的个数，包括子目录：
+
+```bash
+ls -lR|grep "^-"|wc -l
+```
+
+统计当前目录下目录的个数，包括子目录
+
+```bash
+ls -lR|grep "^d"|wc -l
 ```
 
 
