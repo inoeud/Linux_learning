@@ -254,15 +254,87 @@ docker run -d -p 8000:80 --name typecho --restart=always -v /media/typecho:/data
 
 #### 04.3.3  私人网盘 Filebrowser
 
-```bash
-docker pull 80x86/filebrowser:latest
-```
-
-#### 04.3.4 下载工具 qbittorrent
+http + 硬件编码：
 
 ```bash
-docker run -d  --name="qbittorrent" --restart=always -v /downloads:/downloads /media/qbittorrent/data:/data /media/qbittorrent/config:/config 80x86/qbittorrent
+docker run -d \
+    --name filebrowser \
+    --restart unless-stopped \
+    --device=/dev/dri/renderD128:/dev/dri/renderD128 \
+    --net=host \
+    -v /media:/myfiles \
+    -v /docker/config:/config \
+    --mount type=tmpfs,destination=/tmp \
+    80x86/filebrowser:2.9.4-amd64
 ```
+
+#### 04.3.4  下载工具 qbittorrent
+
+```bash
+docker run -d \
+    --name qbittorrent \
+    --restart unless-stopped \
+    --net=host \
+    -v /downloads:/downloads \
+    -v /docker/qbittorrent/config:/config \
+    -v /docker/qbittorrent/data:/data \
+    80x86/qbittorrent:4.3.5-alpine-3.13.5-amd64-full
+    
+sudo nano /docker/qbittorrent/config/qBittorrent.conf
+
+将WebUI\HTTPS\Enabled=true改为WebUI\HTTPS\Enabled=false
+
+sudo docker restart qbittorrent
+```
+
+#### 04.3.5  自建 DNS AdGuard Home 
+
+创建 macvlan 网络（根据实际情况替换参数，并删除注释）
+
+```bash
+docker network create \
+    -d macvlan \ # 使用 macvlan 网络驱动
+    --subnet=10.0.0.0/24 \ # 指定网段
+    --gateway=10.0.0.1 \ # 指定网关 IP
+    -o parent=eth0 \ # 指定网卡
+    openwrt # 网络名称，随意，自己记得就行
+    
+ 实例：   
+docker network create -d macvlan --subnet=10.0.0.0/24 --gateway=10.0.0.1 -o parent=enp0s31f6 AdGuard
+```
+
+启动容器（根据实际情况替换参数，并删除注释）
+
+```bash
+docker run -d \
+    --name adguardhome \
+    --restart unless-stopped \
+    --log-opt max-size=1m \
+    --network openwrt \ # 使用之前创建的 macvlan 网络
+    --ip 10.0.0.53 \ # 设置本容器的 IP
+    -v $PWD/adguardhome/work:/opt/adguardhome/work \
+    -v $PWD/adguardhome/conf:/opt/adguardhome/conf \
+    adguard/adguardhome
+
+ 实例： 
+docker run -d \
+    --name adguardhome \
+    --restart unless-stopped \
+    --log-opt max-size=1m \
+    --network AdGuard \
+    --ip 10.0.0.3 \
+    -v /docker/adguardhome/work:/opt/adguardhome/work \
+    -v /docker/adguardhome/conf:/opt/adguardhome/conf \
+    adguard/adguardhome
+```
+
+配置，参考这篇[教程](https://p3terx.com/archives/use-adguard-home-to-build-dns-to-prevent-pollution-and-remove-ads-2.html)
+
+
+
+
+
+
 
 
 
@@ -361,11 +433,149 @@ sudo apt install ipython3
 
 #### 06.1.2  编译安装
 
+0.安装依赖
+
+```bash
+apt install libgdal-dev build-essential libatlas-base-dev libgdal-dev libdb-dev libdb5.3-dev libxslt1-dev  libncurses5-dev -y
+
+apt install libxml2-dev libxslt1-dev zlib1g-dev libffi-dev libssl-dev zlibc zlib1g-dev libhdf5-dev libxml2-dev -y
+
+apt install libdb-dev libdb5.3-dev libreadline-dev libpcap-dev libpcap0.8 libpcap0.8-dev libhdf5-dev libxml2-dev -y
+
+apt dist-upgrade
+
+apt install build-essential  libncursesw5-dev libgdbm-dev libc6-dev zlib1g-dev libsqlite3-dev tk-dev libssl-dev openssl gfortran  liblapack-dev libhdf5-dev libzbar-dev libbz2-dev -y
+```
+
+1.下载源码
+
+```bash
+wget https://www.python.org/ftp/python/3.7.7/Python-3.7.7.tgz
+```
+
+2.命令行切换到上面压缩文件所在的目录（比如桌面），然后输入 `tar -xzf Python-3.7.7.tgz`
+
+> 这里 tar表示解压缩，-x 表示从档案文件中释放文件，z 表示用 gzip 解压（用于 xx.tgz 以及 xx.tar.gz 格式的压缩包），f 后面是压缩文件名。
+
+3.命令行目录切换到解压后的文件夹中，也就是 Python-3.7.7 文件夹。然后执行 
+
+```bash
+mkdir -p /usr/local/python3
+
+./configure --prefix=/usr/local/python3 --with-ssl --enable-optimizations 
+
+#执行这步是后面最好加上 --enable-optimizations 会自动安装pip3及优化配置
+#在./configure过程中，如果没有加上–with-ssl参数时，默认安装的软件涉及到ssl的功能不可用，
+#这个命令的作用是生成 Makefile 文件，以供下一步的 make 命令使用。
+#Makefile 文件存储的时构建 (build) 顺序，linux build 程序组件时需要按照 Makefile 指定的顺序。
+```
+
+4.
+
+```bash
+make -j2 
+#编译源代码，并生成执行文件
+make install
+#是把生成的执行文件拷贝到 linux 系统中必要的目录下，比如拷贝到 `usr/local/bin` 目录下，这样所有的用户都可以运行这个程序了。
+```
+
+5.删除原有的软连接
+
+```bash
+python3 -V
+
+pip3 -V
+
+rm -rf /usr/bin/python3
+
+rm -rf /usr/bin/pip3
+```
+
+6.建立新的指向python3.7的软链接
+
+```bash
+#添加python3的软链接 
+
+ln -s /usr/local/python3/bin/python3.7 /usr/bin/python3 
+
+#添加 pip3 的软链接 
+
+ln -s /usr/local/python3/bin/pip3.7 /usr/bin/pip3
+```
+
+7.检测版本
+
+```bash
+root@arm-64:/usr/local/python3/bin# python3 -V
+Python 3.7.7
+root@arm-64:/usr/local/python3/bin# pip3 -V
+pip 19.2.3 from /usr/local/python3/lib/python3.7/site-packages/pip (python 3.7)
+```
+
+8.升级pip/setuptool
+
+```bash
+pip3 install --upgrade pip setuptools
+```
 
 
 
+安装pip后，无法使用pip安装一些包，总是会出现上述错误
+
+```bash
+subprocess.CalledProcessError: Command '('lsb_release', '-a')' returned non-zero exit status 1.
 
 
+```
+
+```bash
+解决方案：
+
+找到lsb_release.py文件和CommandNotFound目录，把它们拷贝到报的错误中subprocess.py所在文件夹
+
+cp  /usr/lib/python3/dist-packages/lsb_release.py /usr/local/python3/lib/python3.7/
+
+同时还需要将CommandNotFound所在的目录复制到上面相同的目录下面
+
+sudo cp -fr /usr/lib/python3/dist-packages/CommandNotFound   /usr/local/python3/lib/python3.7/
+
+将__pycache__子目录中的文件名中带有38名字的文件更改为37
+
+
+网上参考文献[2]中说，执行下面的命令也可以解决这个问题：
+
+sudo rm /usr/bin/lsb_release
+
+我个人不赞成这么做，因为这破坏了系统的完整性，将系统中的这个命令删去了。
+
+```
+
+### 06.2  第三方库
+
+**第三方库**
+
+```bash
+pip3 install wheel
+pip3 install nose
+pip3 install requests
+pip3 install pyzbar
+pip3 install Pillow
+pip3 install prettytable
+pip3 install selenium
+pip3 install beautifulsoup4 
+pip3 install lxml
+pip3 install numpy
+pip3 install parsel
+pip3 install twisted
+pip3 install w3lib
+pip3 install cryptography
+pip3 install pyOpenSSL
+pip3 install protego
+pip3 install Scrapy
+pip3 install scipy
+pip3 install mock
+pip3 install sklearn
+```
 
 
 
@@ -507,7 +717,7 @@ Minute Hour Day Month DayOFWeek Command
 
 
 
-#### 09.2.3  统计文件和目录
+### 09.3  统计文件和目录
 
 Linux统计当前目录下有多少文件和目录
 
@@ -536,6 +746,59 @@ ls -lR|grep "^-"|wc -l
 ```bash
 ls -lR|grep "^d"|wc -l
 ```
+
+
+
+### 09.4  中文 man 手册页
+
+#### 09.4.1  通过包管理器安装
+
+```bash
+1.安装
+sudo apt update
+sudo apt install manpages-zh
+2.查看manpages-zh库的安装路径，例如:/usr/share/man/zh_CN/
+dpkg -L manpages-zh
+3.简单测试，介绍为中文则无误
+man -M /usr/share/man/zh_CN open
+4.使用alias命令给中文man取名为cman,方便后期使用。
+sudo su
+echo "alias cman='man -M /usr/share/man/zh_CN'" >> /etc/profile.d/cman.sh
+注意/usr/share/man/zh_CN路径的正确性。
+5.刷新缓存
+source /etc/profile.d/cman.sh
+6.验证
+cman open
+如果此命令的效果和man -M /usr/share/man/zh_CN open命令的效果一致，则设置成功。
+```
+
+#### 09.4.1 使用
+
+```bash
+cman <命令>
+```
+
+
+
+### 09.5  aria2-pro
+
+```bash
+wget https://github.com/P3TERX/aria2.sh/archive/refs/heads/master.zip
+sudo unzip master.zip && cd aria2.sh-master
+sudo chmod 777 *sh && sudo ./*sh
+
+然后就等安装好再修改配置就行了~
+```
+
+
+
+
+
+
+
+
+
+
 
 
 
