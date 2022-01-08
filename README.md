@@ -18,6 +18,9 @@
 ## 01  换源  
 
 由于国内的网络原因，官方源用起来会非常慢。但是在安装的时候他会检测自动帮你换一个比较快的源。其实也没差，但是不排除你有强迫症，就是想用国内源。
+
+- `GNU/Linux` 手动换源
+
 ```bash
 1.备份原有源（万一有啥毛病也能替换回去）
 sudo cp -v /etc/apt/sources.list /etc/apt/sources.list.backup
@@ -40,9 +43,23 @@ deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal-security main restricted 
 sudo apt update && sudo apt upgrade -y
 ```
 
+- `GNU/Linux` 一键更换国内软件源脚本
 
+```bash
+bash <(curl -sSL https://gitee.com/SuperManito/LinuxMirrors/raw/main/ChangeMirrors.sh)
+```
 
+> **注意：**
+>
+> - *Debian 系 Linux 默认禁用了源码仓库和预发布软件源，若需启用可将 list 源文件中相关内容的所在行 `取消注释`。*
 
+例行要安装的软件
+
+```bash
+sudo apt install -y mc curl wget git build-essential cmake glances byobu jq htop lsof ccze net-tools dnsutils # for dig
+
+sudo apt install ssh samba # 基础服务，确保系统初装后能够被远程配置
+```
 
 ## 02  Samba
 
@@ -243,13 +260,23 @@ curl -sSL https://get.daocloud.io/docker | sudo sh
 #### 04.3.1  图形化管理工具 Portainer 
 
 ```bash
-docker run -d -p 9000:9000 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock portainer/portainer-ce
+docker run -d \
+-p 9000:9000 \
+--name portainer \
+--restart=always \
+-v /var/run/docker.sock:/var/run/docker.sock \
+portainer/portainer-ce
 ```
 
 #### 04.3.2  个人博客 Typecho
 
 ```bash
-docker run -d -p 8000:80 --name typecho --restart=always -v /media/typecho:/data 80x86/typecho:latest
+docker run -d \
+-p 8000:80 \
+--name typecho \
+--restart=always \
+-v /media/typecho:/data \
+80x86/typecho:latest
 ```
 
 #### 04.3.3  私人网盘 Filebrowser
@@ -330,18 +357,162 @@ docker run -d \
 
 配置，参考这篇[教程](https://p3terx.com/archives/use-adguard-home-to-build-dns-to-prevent-pollution-and-remove-ads-2.html)
 
+#### 04.3.6  自动更新镜像与容器  Watch­tower
+
+所有容器（包括 Watch­tower）都会自动更新，`--cleanup` 选项，这样每次更新都会把旧的镜像清理掉。
+
+```bash
+docker run -d \
+    --name watchtower \
+    --restart unless-stopped \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    containrrr/watchtower \
+    --cleanup
+```
+
+注：[参考教程](https://p3terx.com/archives/docker-watchtower.html)
+
+#### 04.3.7  阿里云盘 webdav-aliyundriver
+
+```bash
+docker run -d \
+--name=webdav-aliyundriver \
+--restart=always -p 9080:8080 \
+-v /etc/localtime:/etc/localtime \
+-v /docker/aliyun-driver/:/etc/aliyun-driver/ \
+-e TZ="Asia/Shanghai" \
+-e ALIYUNDRIVE_REFRESH_TOKEN="your refreshToken" \
+-e ALIYUNDRIVE_AUTH_PASSWORD="admin" \
+-e JAVA_OPTS="-Xmx1g" \
+zx5253/webdav-aliyundriver
+
+# /etc/aliyun-driver/ 挂载卷自动维护了最新的refreshToken，建议挂载
+# ALIYUNDRIVE_AUTH_PASSWORD 是admin账户的密码，建议修改
+# JAVA_OPTS 可修改最大内存占用，比如 -e JAVA_OPTS="-Xmx512m" 表示最大内存限制为512m
+```
+
+#### 04.3.8  Awesome TTRSS
+
+```bash
+docker run -itd \
+--name ttrss \
+--restart unless-stopped \
+-p 9090:80 \
+wangqiru/ttrss \
+-e SELF_URL_PATH = http://10.0.0.40:9090/ \
+-e DB_HOST = 127.0.0.1 \
+-e DB_PORT = 5432 \
+-e DB_NAME = TTRSS \
+-e DB_USER = orca \
+-e DB_PASS = althaea
+
+变量加后面就好了
+还是运行不了，不弄了
+```
+
+#### 04.3.9  数据库 postgresql  
+
+```bash
+docker run --name postgres -e POSTGRES_PASSWORD=althaea -e POSTGRES_USER=orca -d postgres
 
 
+POSTGRES_PASSWORD
+使用此环境变量是使用 PostgreSQL 映像所必需的。它不能为空或未定义。此环境变量设置 PostgreSQL 的超级用户密码。默认超级用户由环境变量定义。POSTGRES_USER
 
+注1：PostgreSQL 映像在本地设置身份验证，因此您可能会注意到从（在同一容器内）进行连接时不需要密码。但是，如果从其他主机/容器进行连接，则需要输入密码。trustlocalhost
 
+注2：此变量定义 PostgreSQL 实例中的超级用户密码，由脚本在初始容器启动期间设置。它对客户端在运行时可能使用的环境变量没有影响，如https://www.postgresql.org/docs/current/libpq-envars.html中所述。，如果使用，将被指定为单独的环境变量。initdbPGPASSWORDpsqlPGPASSWORD
 
+POSTGRES_USER
+此可选环境变量与 一起使用，用于设置用户及其密码。此变量将创建具有超级用户能力的指定用户和具有相同名称的数据库。如果未指定，则将使用 的默认用户。POSTGRES_PASSWORDpostgres
+
+请注意，如果指定了此参数，PostgreSQL 在初始化期间仍将显示。这是指运行守护程序的 Linux 系统用户（来自映像中），因此与该选项无关。有关更多详细信息，请参阅标题为"任意注释"的部分。The files belonging to this database system will be owned by user "postgres"/etc/passwdpostgresPOSTGRES_USER--user
+```
+
+#### 04.3.9  数据库管理 pgadmin4 
+
+```bash
+通过端口 80 运行一个简单的容器：
+docker pull dpage/pgadmin4
+docker run -p 80:80 \
+    -e 'PGADMIN_DEFAULT_EMAIL=user@domain.com' \
+    -e 'PGADMIN_DEFAULT_PASSWORD=SuperSecret' \
+    -d dpage/pgadmin4
+    
+PGADMIN_DEFAULT_EMAIL
+这是设置初始管理员帐户以登录到 pgAdmin 时使用的电子邮件地址。此变量是必需的，必须在启动时设置。
+PGADMIN_DEFAULT_PASSWORD
+这是设置初始管理员帐户以登录到 pgAdmin 时使用的密码。此变量是必需的，必须在启动时设置。
+```
+
+[容器部署 — pgAdmin 4 6.3 文档](https://www.pgadmin.org/docs/pgadmin4/latest/container_deployment.html)
+
+#### 04.3.10  影音播放 jellyfin  
+
+```bash
+docker run -d \
+    --name jellyfin \
+    --restart unless-stopped \
+    --net=host \
+    -v /docker/jellyfin/data:/data \
+    -v /docker/jellyfin/config:/config \
+    -v /downloads:/media \
+    nyanmisaka/jellyfin
+```
+
+#### 04.3.11  青龙面板 qinglong 
+
+```bash
+docker run -dit \
+  -v /docker/ql/config:/ql/config \
+  -v /docker/ql/log:/ql/log \
+  -v /docker/ql/db:/ql/db \
+  -v /docker/ql/repo:/ql/repo \
+  -v /docker/ql/raw:/ql/raw \
+  -v /docker/ql/scripts:/ql/scripts \
+  -p 5700:5700 \
+  --name qinglong \
+  --hostname qinglong \
+  --restart unless-stopped \
+  whyour/qinglong:latest
+```
+
+#### 04.3.12  智能家居 homeassistant
+
+```bash
+docker run -dit \
+  -v /docker/homeassistant:/ql/config \
+  -v /etc/localtime:/etc/localtime:ro \
+  -e TZ=Asia/Shanghai \
+  --name homeassistant \
+  --net=host \
+  --restart unless-stopped \
+  homeassistant/home-assistant:latest
+```
+
+#### 04.3.12  MQTT 消息服务器 emqx
+
+```bash
+docker run -d \
+-v /docker/emqx/data:/opt/emqx/data \
+-v /docker/emqx/etc:/opt/emqx/etc \
+-v /docker/emqx/log:/opt/emqx/log \
+-v /docker/emqx/lib:/opt/emqx/lib \
+--name emqx \
+--net=host \
+emqx/emqx:v4.0.0
+
+docker run -d --name emqx --net=host emqx/emqx:v4.0.0
+
+docker run -d --name emqx -p 1883:1883 -p 8081:8081 -p 8083:8083 -p 8883:8883 -p 8084:8084 -p 18083:18083 emqx/emqx:v4.0.0
+```
 
 
 
 ### 04.4  卸载
 
 ```bash
-或许补充，记得之前看见一篇很不错的教程。是csdn上面的。
+后续补充，记得之前看见一篇很不错的教程。是csdn上面的。
 ```
 
 
@@ -382,7 +553,7 @@ http://www.oracle.com/technetwork/cn/java/javase/downloads/jdk8-downloads-213315
 2.安装jdk
 cd download/
 mkdir /usr/local/java
-tar zxvf jdk-8u151-linux-x64.tar.gz -C /usr/local/java
+tar -zxf jdk-8u151-linux-x64.tar.gz -C /usr/local/java
 ln -s /usr/local/java/jdk1.8.0_151/ /usr/local/java/latest
 
 3. 添加环境变量：
@@ -395,6 +566,7 @@ export PATH=$PATH:$JAVA_HOME/bin
 4.执行并检验
 source /etc/profile
 java -version #检验
+
 ```
 
 
@@ -476,7 +648,7 @@ mkdir -p /usr/local/python3
 make -j2 
 #编译源代码，并生成执行文件
 make install
-#是把生成的执行文件拷贝到 linux 系统中必要的目录下，比如拷贝到 `usr/local/bin` 目录下，这样所有的用户都可以运行这个程序了。
+#是把生成的执行文件拷贝到 linux 系统中必要的目录下，比如拷贝到 usr/local/bin 目录下，这样所有的用户都可以运行这个程序了。
 ```
 
 5.删除原有的软连接
@@ -576,6 +748,96 @@ pip3 install scipy
 pip3 install mock
 pip3 install sklearn
 ```
+
+
+
+
+
+## 07  Node.js
+
+### 07.1  安装Node.js v16.x
+
+```bash
+# Using Ubuntu
+curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+sudo apt-get install -y nodejs
+
+# Using Debian, as root
+curl -fsSL https://deb.nodesource.com/setup_16.x | bash -
+apt-get install -y nodejs
+```
+
+### 07.2  安装Yarn（包管理器）
+
+```bash
+## To install the Yarn package manager, run:
+curl -sL https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | sudo tee /usr/share/keyrings/yarnkey.gpg >/dev/null
+echo "deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian stable main" | sudo tee /etc/apt/sources.list.d/yarn.list
+sudo apt-get update && sudo apt-get install yarn
+```
+
+### 07.3  node-red
+
+```bash
+1.安装
+sudo npm install -g node-red
+2.安装pm2
+sudo npm install pm2 -gd
+3.使用PM2启动Node-red：
+sudo pm2 start node-red
+4.查看启动项列表：
+sudo pm2 ls && sudo pm2 save
+5.设置pm2为自启进程：
+sudo pm2 startup
+```
+
+
+
+
+
+## 08  golang
+
+### 08.1  安装
+
+#### 08.1.1  下载 Go 压缩包
+
+以 root 或者其他 sudo 用户身份运行下面的命令，下载并且解压 Go 二进制文件到`/usr/local`目录：
+
+```bash
+wget -c https://go.dev/dl/go1.17.6.linux-amd64.tar.gz -O - | sudo tar -xz -C /usr/local
+```
+
+#### 08.1.2  添加到`$PATH`环境变量
+
+通过将 Go 目录添加到`$PATH`环境变量，系统将会知道在哪里可以找到 Go 可执行文件。
+
+这个可以通过添加下面的行到`/etc/profile`文件（系统范围内安装）或者`$HOME/.profile`文件（当前用户安装）：
+
+```bash
+export PATH=$PATH:/usr/local/go/bin
+```
+
+保存文件，并且重新加载新的PATH 环境变量到当前的 shell 会话：
+
+```bash
+sudo source /etc/profile
+```
+
+#### 08.1.4  验证
+
+通过打印 Go 版本号，验证安装过程。
+
+```bash
+go version
+```
+
+输出应该像下面这样：
+
+```bash
+go version go1.17.2 linux/amd64
+```
+
+
 
 
 
@@ -780,7 +1042,7 @@ cman <命令>
 
 
 
-### 09.5  aria2-pro
+### 09.5  Aria2-pro
 
 ```bash
 wget https://github.com/P3TERX/aria2.sh/archive/refs/heads/master.zip
@@ -788,6 +1050,30 @@ sudo unzip master.zip && cd aria2.sh-master
 sudo chmod 777 *sh && sudo ./*sh
 
 然后就等安装好再修改配置就行了~
+
+前端面板
+# host 网络模式（如果你需要使用 IPv6 网络访问，这是最简单的方式）
+docker run -d \
+    --name ariang \
+    --log-opt max-size=1m \
+    --restart unless-stopped \
+    --network host \
+    p3terx/ariang --port 6880 --ipv6
+```
+
+
+
+### 09.6  Docker 基本命令
+
+```bash
+停止容器：
+docker stop <CONTAINER>
+删除容器：
+docker rm <CONTAINER>
+更新镜像：
+docker pull <IMAGE>
+启动容器：
+docker run <ARG> ... <IMAGE>
 ```
 
 
