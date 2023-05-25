@@ -90,12 +90,6 @@ nano /etc/samba/smb.conf
 参考模板：
 
 ```bash
-~~[global]~~
-   ~~security = user~~
-   ~~map to guest = bad user~~
-
-
-
 [share]
    comment = Storage
    path = /share
