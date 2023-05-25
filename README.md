@@ -12,13 +12,11 @@
 由于Armbian版本的迭代更新，我本身就是一名追新党，文中的一些修改方式/处理方法可能不再适用于最新的系统，需要读者根据自身的实际情况进行更改~
 
 
-
-
-
 ## 01  换源  
 
 由于国内的网络原因，官方源用起来会非常慢。但是在安装的时候他会检测自动帮你换一个比较快的源。其实也没差，但是不排除你有强迫症，就是想用国内源。
 
+**非常不推荐！！！**
 - `GNU/Linux` 手动换源
 
 ```bash
@@ -42,7 +40,7 @@ deb https://mirrors.tuna.tsinghua.edu.cn/ubuntu/ focal-security main restricted 
 5.更新、升级
 sudo apt update && sudo apt upgrade -y
 ```
-
+**强烈推荐！！！**
 - `GNU/Linux` 一键更换国内软件源脚本
 
 ```bash
@@ -72,7 +70,7 @@ sudo apt install ssh samba # 基础服务，确保系统初装后能够被远程
 （apt的使用）
 
 ```bash
-sudo apt install Samba Samba-common 
+sudo apt install samba samba-common 
 ```
 
 注：说句题外话，新人一定要养好习惯，不要默认使用root账户去处理日常工作，不然你会倒大霉的！真不是我危言耸听，反正倒霉了你就知道了。
@@ -84,7 +82,7 @@ sudo apt install Samba Samba-common
 （文本编辑器nano/vim）
 
 ```bash
-nano /etc/Samba/smb.conf
+nano /etc/samba/smb.conf
 ```
 
 注：可以删除[printers]及[profiles]
@@ -92,9 +90,11 @@ nano /etc/Samba/smb.conf
 参考模板：
 
 ```bash
-[global]
-   security = user
-   map to guest = bad user
+~~[global]~~
+   ~~security = user~~
+   ~~map to guest = bad user~~
+
+
 
 [share]
    comment = Storage
