@@ -106,7 +106,7 @@ nano /etc/samba/smb.conf
 
 ```bash
 sudo service smbd restart
-抑或是
+亦或是
 sudo /etc/init.d/smbd restart
 ```
 
